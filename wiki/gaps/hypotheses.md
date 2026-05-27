@@ -71,3 +71,62 @@ Your testable research ideas. Each hypothesis must be falsifiable: "If X is true
 5. If tuned baseline closes >50% of the gap, the "external guidance is necessary" assumption (A2) is weakened — the field is overcomplicating the problem
 **Risks**: The tuning space is large; need to be systematic to avoid cherry-picking. Also: this hypothesis being true doesn't mean complex methods are worthless — it means we don't know what the real baseline is. The result is interesting either way.
 **Created**: 2026-05-25
+
+---
+
+## H5: Text-to-point grounding generalizes beyond IQA — LMMs already have latent spatial grounding ability that can be unlocked training-free in other domains
+
+**Status**: draft
+**Feasibility**: High on 8×3090. No training required — purely inference-time evaluation. Take an existing LMM (Qwen2.5-VL-7B), prompt it with spatial questions on existing datasets, extract positional term logits, feed to SAM, measure mIoU. Can be done in <1 day on a single GPU.
+**Addresses gap**: Cross-domain generalization of the text-to-point paradigm. [[gaps/questions]] — "Could this multi-granularity task taxonomy generalize to other visual understanding domains?" + challenges implicit assumption A5 (new capabilities require new training objectives)
+**If true, then**: Applying the text-to-point grounding pipeline (closed-set softmax over positional term logits → SAM point prompt) to FGVR datasets (CUB-200 part localization, iNat attribute grounding) should yield non-trivial segmentation accuracy (mIoU > 0.15) without ANY domain-specific training, purely by repurposing the LMM's existing spatial language capability.
+**How to test**:
+1. Take Qwen2.5-VL-7B (or Qwen3-VL-7B) — no fine-tuning
+2. Design spatial prompts for FGVR: "Which part of the bird shows the most distinctive color pattern?" → extract left/right/top/bottom logits
+3. Map to point coordinates, feed to frozen SAM
+4. Evaluate on CUB-200 with part annotations (head, wing, tail, breast) — measure mIoU
+5. Also test on a non-visual domain (e.g., document layout: "Where is the title on this page?")
+6. If mIoU > 0.15 on birds (vs. random point ~0.05), the spatial knowledge is latent and domain-general
+7. Compare against a version where the same LMM is fine-tuned on IQA-Spider Stage 1 data — does IQA-specific tuning improve or hurt generalization?
+**Risks**: LMMs may not naturally use positional language for FGVR attributes (they describe "red wing" but may not say "the red patch on the left wing"). FGVR part annotations may be too coarse for point-based grounding (a single point can't capture "the entire wing"). The success of this hypothesis depends on the LMM's pre-existing spatial language habits, which may be domain-dependent.
+**Created**: 2026-05-27
+
+---
+
+## H6: DIVA-style shared/unique factorization can bridge knowledge injection and knowledge deployment in FGVR
+
+**Status**: draft
+**Feasibility**: Medium on 8×3090. Requires implementing DIVA's factorization on top of Fine-R1's two-path setup. Fine-R1-3B training is already tight on 8×3090; adding gated-MLP encoders and MI objectives increases memory. But the factorization operates only on middle layers + lightweight encoders (3-layer MLPs), not full model. Estimate ~1.5× Fine-R1 training cost. Doable with ZeRO-3 and gradient checkpointing.
+**Addresses gap**: Cross-cutting thread: internal vs. external alignment signals. [[gaps/questions]] — "DIVA's internal MI-based alignment vs. TARA's external BFM teacher — could they be combined?" + challenges A4 (knowledge injection and deployment are separate problems — what if one mechanism bridges both?)
+**If true, then**: Applying DIVA-style factorization to Fine-R1's two information flows — (a) CoT reasoning flow (visual analysis → comparison → prediction) and (b) direct classification flow (image → answer) — with shared components aligned via InfoNCE and unique components disentangled via NCE-CLUB, should improve closed-world FGVR accuracy by ≥2pp over Fine-R1 alone, because the shared factors would inject CoT's discriminative reasoning into the direct path without the inference cost of generating CoT.
+**How to test**:
+1. Take Fine-R1-3B after CoT SFT (before TAPO)
+2. Construct two information flows from the same anchor image: Flow A = image + CoT prompt → full reasoning trace; Flow B = image + direct classification prompt → answer
+3. Apply DIVA's two-stage post-training on middle layers (determine optimal layer range via diagnostic analysis):
+   - Stage 1: Train gated-MLP shared/unique encoders with cross-path logit injection (backbone frozen)
+   - Stage 2: Fine-tune middle layers with asymmetric InfoNCE alignment + NCE-CLUB disentanglement
+4. At inference, use Flow B only (direct classification, no CoT) but with DIVA-enhanced representations
+5. Compare against: (a) Fine-R1 baseline, (b) Fine-R1 + TARA
+6. If DIVA-enhanced Flow B > Fine-R1 baseline, the factorization successfully transferred CoT knowledge into the direct path
+**Risks**: The bias difference between CoT reasoning and direct classification may be weaker than the understanding vs. generation divergence in UMMs — without pixel-level supervision, the two FGVR paths may not naturally decouple. The "shared" component may end up capturing everything, leaving unique components as noise. A diagnostic experiment (gradient conflict analysis between the two flows, like DIVA's Figure 2) should precede full implementation.
+**Created**: 2026-05-27
+
+---
+
+## H7: Inference-time teacher retention improves performance — challenging the universal "discard the teacher" assumption
+
+**Status**: draft
+**Feasibility**: Medium on 8×3090. Requires modifying inference pipelines of existing methods, not retraining. TARA inference: keep BFM projector, compute BFM embedding of input, use as additional retrieval/scoring feature. ITSELF inference: keep attention maps, use for token re-weighting. GRAB's local branch is already used at inference (λ_S blending) — so only TARA and IQA-Spider variants need testing. TARA variant requires loading BioCLIP2 at inference (~4GB), manageable.
+**Addresses gap**: [[synthesis/shared-assumptions#A3]] — "The teacher/guidance signal can be discarded at inference." This is the most unexamined assumption in the wiki — NO paper has ablated "training-only teacher" vs. "teacher at inference too." If keeping the teacher helps, it opens a new design dimension. If it doesn't help, A3 is validated and we can confidently discard teachers.
+**If true, then**: For at least one method, keeping the teacher signal at inference should yield measurable improvement over discarding it. Specifically: (a) TARA + BFM retrieval (compute BFM embedding of test image, use cosine similarity to BFM-text-encoded candidate labels as an auxiliary score) should improve HCA by ≥1pp over standard TARA inference; OR (b) IQA-Spider + attention-map reweighting at inference should improve grounding mIoU over the text-to-point-only baseline.
+**How to test**:
+1. **TARA variant**: Take a trained TARA model (Qwen3-VL-2B on iNat21-Plant). At inference, instead of discarding projectors and BFM:
+   - Keep P_V, compute BFM visual embedding of test image
+   - Compute cosine similarity to BFM text embeddings of candidate labels (at the target taxonomic level)
+   - Combine with LMM prediction logits: score = α × LMM_logit + (1-α) × BFM_similarity
+   - Sweep α on validation set
+   - If any α < 1.0 beats α = 1.0 (pure LMM, standard TARA), the teacher has inference value
+2. **IQA-Spider variant**: At inference, extract attention maps from the LMM's middle layers, use attention-weighted token aggregation as an additional spatial prior combined with the text-to-point coordinate. If attention + text-to-point > text-to-point alone, the teacher signal helps at inference.
+3. **ITSELF baseline**: GRAB already uses attention at inference (local branch contributes λ_S weight). This is the positive control — it confirms that keeping the "teacher" at inference CAN help. The question is whether it generalizes to other methods.
+**Risks**: TARA's BFM teacher may not add signal beyond what the LMM already internalized during training — the alignment loss already moved LMM features close to BFM features, so BFM similarity may be redundant. The α-sweep may find α=1.0 is optimal, confirming A3. Negative result is still scientifically valuable (validates a widespread but untested assumption). For IQA-Spider, attention maps during grounding-specific prompts may not be cleaner than the text-to-point logits.
+**Created**: 2026-05-27

@@ -40,3 +40,35 @@ Append-only timestamped log. Every ingest, query session, idea generation, and l
   - H3: Teacher signal quality threshold is surprisingly low (noisy guidance works nearly as well)
 - Added feasibility assessments (H1: Low, H2: High, H3: Medium) given 8×3090 hardware constraint
 - Added H4: FGVR gap is a training recipe problem, not a capability problem (feasibility: High)
+
+## 2026-05-27
+
+### Ingest: DIVA (ICML 2026)
+- Paper: "DIVA: Harnessing the Representation Divergence in Unified Multimodal Models for Mutual Reinforcement"
+- Core claim: Representation divergence between understanding and generation branches in UMMs can be transformed into mutual reinforcement by factorizing middle-layer representations into shared/unique components and applying asymmetric MI alignment
+- Created paper note: [[papers/DIVA-representation-divergence-mutual-reinforcement]]
+- Created concept: [[concepts/DIVA]]
+- Created entity: [[entities/UMM]]
+- Added 5 open questions to [[gaps/questions]]
+- Cross-cutting insight: DIVA and TARA represent two ends of a spectrum — internal MI-based alignment vs. external teacher-based alignment. Both "align representations" but with fundamentally different signal sources.
+- First paper in a new domain (UMMs), expanding wiki coverage beyond FGVR/HVR/TBPS
+
+### Ingest: IQA-Spider (ICML 2026)
+- Paper: "IQA-Spider: Unifying Multi-Granularity Image Quality Assessment with Reasoning, Grounding and Referring"
+- Core claim: Multi-granularity IQA (reasoning + grounding + referring) can be unified in a single LMM via a training-free text-to-point grounding paradigm that maps positional term logits to SAM point prompts — no special tokens, no architectural modification
+- Created paper note: [[papers/IQA-Spider-multi-granularity-quality]]
+- Created concept: [[concepts/text-to-point-grounding]]
+- Created entity: [[entities/IQA]]
+- Added 5 open questions to [[gaps/questions]]
+- New domain: IQA/explainable quality assessment, expanding wiki coverage beyond FGVR/HVR/TBPS/UMM
+- Cross-cutting insight: text-to-point grounding is the purest instance of the "don't retrain, redirect" pattern yet — it achieves a new capability (pixel-level grounding) with zero training, purely by reinterpreting native model outputs. Compare with ITSELF (attention maps as guidance) and DIVA (native logits for cross-task transfer).
+
+### Idea Generation Session
+- Read [[synthesis/shared-assumptions]] (A1–A4) — now informed by 5 papers across 4 domains
+- Identified a new implicit assumption from IQA-Spider and DIVA: **A5 — new capabilities require new training objectives or architectural modules**. Both papers challenge this: IQA-Spider unlocks grounding training-free, DIVA unlocks cross-task transfer with minimal middle-layer post-training.
+- Generated 3 new hypotheses in [[gaps/hypotheses]]:
+  - H5: Text-to-point grounding generalizes beyond IQA — LMMs have latent spatial grounding ability (feasibility: High). Challenges A5.
+  - H6: DIVA-style shared/unique factorization can bridge knowledge injection and deployment in FGVR (feasibility: Medium). Challenges A4 + extends the DIVA→FGVR analysis.
+  - H7: Inference-time teacher retention improves performance, challenging universal "discard the teacher" assumption A3 (feasibility: Medium). No paper has ablated this.
+- Total hypotheses now: 7 (H1–H4 from 2026-05-25, H5–H7 new)
+- H7 is notable: A3 (teacher discarded at inference) is the MOST unexamined assumption — 3 papers do it, 0 papers test whether keeping the teacher helps. Even a null result would be scientifically valuable.
