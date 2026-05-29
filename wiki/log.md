@@ -72,3 +72,19 @@ Append-only timestamped log. Every ingest, query session, idea generation, and l
   - H7: Inference-time teacher retention improves performance, challenging universal "discard the teacher" assumption A3 (feasibility: Medium). No paper has ablated this.
 - Total hypotheses now: 7 (H1–H4 from 2026-05-25, H5–H7 new)
 - H7 is notable: A3 (teacher discarded at inference) is the MOST unexamined assumption — 3 papers do it, 0 papers test whether keeping the teacher helps. Even a null result would be scientifically valuable.
+
+## 2026-05-29
+
+### Idea Generation Session
+- Read [[synthesis/shared-assumptions]] (A1–A4), existing hypotheses (H1–H7), all 5 paper notes, all open questions
+- **Major infrastructure update**: Populated [[gaps/confirmed-gaps]] with 4 confirmed gaps derived from cross-paper analysis:
+  - G1: Cross-domain generalization completely unverified (4 papers evidence)
+  - G2: Scalability to larger models unknown (3 papers evidence)
+  - G3: Teacher/guidance signal quality dependency unexamined (3 papers evidence)
+  - G4: Critical hyperparameters chosen empirically without principled diagnostics (3 papers evidence)
+- Generated 3 new hypotheses in [[gaps/hypotheses]]:
+  - **H8**: Data construction pipeline, not training algorithm, is the active ingredient (feasibility: High). Method-vs-data confound — every paper constructs special training data but none ablates "our data + simple baseline." Addresses G3 (teacher quality) from a broader angle: the teacher IS a data construction choice.
+  - **H9**: LMMs have multiple independent latent capabilities beyond spatial grounding — counting, comparative judgment, temporal ordering, part-whole reasoning — accessible via logit manipulation (feasibility: High). IQA-Spider's text-to-point is one instance of a general phenomenon. Addresses G1 (cross-domain generalization) via a training-free route. Challenges A2 (external guidance necessary) — if capabilities are already latent, we don't need new guidance, we need better access.
+  - **H10**: Optimal layer for representation intervention is predictable from linear probing accuracy for the target structure — no exhaustive search needed (feasibility: High). Addresses G4 (empirical hyperparameter selection) across all 3 layer-intervention methods (TARA, DIVA, ITSELF). If probing predicts optimal layers, layer selection becomes a diagnostic, not a search.
+- Total hypotheses now: 10 (H1–H7 from prior sessions, H8–H10 new)
+- Cross-cutting observation: H8, H9, H10 are all "methodology hygiene" hypotheses — they question whether the field's apparent progress (complex methods, domain-specific gains, empirical tuning) reflects genuine advances or measurement/confound artifacts. This is a theme that H4 (training recipe problem) started — the wiki is accumulating convergence evidence that the field may be overcomplicating things.

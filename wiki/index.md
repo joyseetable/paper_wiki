@@ -50,7 +50,9 @@ This is the entry point into the knowledge base. It tracks what areas are covere
 
 - [[gaps/confirmed-gaps]] — problems the field agrees are open
 - [[gaps/hypotheses]] — your current ideas and their status
-- [[gaps/questions]] — open questions from reading (15 questions)
+- [[gaps/confirmed-gaps]] — 4 gaps confirmed by 3+ papers (G1–G4)
+- [[gaps/hypotheses]] — 10 current hypotheses (H1–H10)
+- [[gaps/questions]] — open questions from reading (25+ questions)
 - [[synthesis/field-map]] — how the pieces fit together
 - [[synthesis/shared-assumptions]] — what everyone takes for granted
 - [[overview]] — 1-page summary of your current understanding
