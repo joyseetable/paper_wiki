@@ -55,3 +55,27 @@ Less formal than confirmed-gaps — things that puzzle you while reading. A scra
 - **Q**: The four-task IQA paradigm (global description, local description, grounding, referring) is defined for quality assessment — but could this multi-granularity task taxonomy generalize to other visual understanding domains? e.g., medical imaging (lesion description + grounding), remote sensing, or FGVR (attribute description + part localization)? Sparked by [[IQA-Spider-multi-granularity-quality]]
 - **Q**: Text-to-point grounding converts logits to a single (x,y) point. How would it handle cases requiring multiple point prompts (e.g., multiple disconnected distortion regions)? Would iterative prompting (segment → remove → re-prompt) work, or does the paradigm inherently assume single-target grounding? Sparked by [[IQA-Spider-multi-granularity-quality]]
 - **Q**: IQA-Spider only tests on 4B–7B models. Larger LMMs may have richer spatial language and better positional term logit distributions — could text-to-point grounding benefit from scale in ways that special-token grounding does not? Sparked by [[IQA-Spider-multi-granularity-quality]]
+
+## Questions from SG-SRL Ingest
+
+- **Q**: SG-SRL decouples semantic learning from form learning via recovery SFT. Could this decoupling work for other RL settings where reward hacking is structural — e.g., length bias in summarization, verbosity in instruction following? Sparked by [[SG-SRL-crosslingual-semantic-rl]]
+- **Q**: The reranker reward + safeguard approach achieves semantic gains despite reward hacking. Is the "accept the hacked intermediate, recover later" pattern generalizable to other RLHF/deployment pipelines? Sparked by [[SG-SRL-crosslingual-semantic-rl]]
+
+## Questions from AgentDoG 1.5 Ingest
+
+- **Q**: Influence-function purification selects ~1k samples that best align with guardrail behavior. Could this technique be applied to select FGVR training samples — e.g., choose the most category-discriminative images from a large pool? Sparked by [[AgentDoG-1.5-agent-safety]]
+- **Q**: AgentDoG's 3D taxonomy (risk source × failure mode × real-world harm) is a structured diagnostic format. Could a similar multi-axis diagnostic improve FGVR analysis — e.g., error source (visual ambiguity vs. taxonomic confusion) × failure mode (wrong species vs. wrong genus) × consequence? Sparked by [[AgentDoG-1.5-agent-safety]]
+
+## Questions from FEC Robot Ingest
+
+- **Q**: Future-conditioned RL fine-tuning consistently outperforms no-future. Could generated "future visual hypotheses" serve as structured priors in other sequential prediction tasks — e.g., predicting next diagnostic states in medical imaging? Sparked by [[FEC-future-experience-conditioning]]
+
+## Questions from AGSM Ingest
+
+- **Q**: AGSM trains only soft tokens (1.8M params) while keeping the diffusion backbone frozen. This is a strong instance of "don't retrain, redirect" — could soft-token-only training work for FGVR LMMs? Training a few learnable prefix tokens instead of full TARA alignment might be far cheaper. Sparked by [[AGSM-alignment-guided-score-matching]]
+- **Q**: AGSM's dual-token design (ψ+ for positive guidance, ψ− for negative guidance, drop ψ− at inference) explicitly separates alignment signal from contrastive signal. Could TARA adopt this — train a separate "negative BFM token" to push away from wrong taxonomic branches? Sparked by [[AGSM-alignment-guided-score-matching]]
+
+## Questions from CGPO Ingest
+
+- **Q**: CGPO shows that training-time critic guidance + unguided deployment avoids inference overhead. TARA also follows this pattern (teacher at training, discard at inference). Is there a general principle: "expensive guidance during training, cheap inference"? Sparked by [[CGPO-critic-guided-diffusion-policy]]
+- **Q**: CGPO's DSG constraint keeps guided steps on the diffusion manifold. Is there an analogous constraint for representation alignment — e.g., ensuring BFM-aligned features stay within the LMM's representational manifold to avoid degradation? Sparked by [[CGPO-critic-guided-diffusion-policy]]

@@ -88,3 +88,85 @@ Append-only timestamped log. Every ingest, query session, idea generation, and l
   - **H10**: Optimal layer for representation intervention is predictable from linear probing accuracy for the target structure — no exhaustive search needed (feasibility: High). Addresses G4 (empirical hyperparameter selection) across all 3 layer-intervention methods (TARA, DIVA, ITSELF). If probing predicts optimal layers, layer selection becomes a diagnostic, not a search.
 - Total hypotheses now: 10 (H1–H7 from prior sessions, H8–H10 new)
 - Cross-cutting observation: H8, H9, H10 are all "methodology hygiene" hypotheses — they question whether the field's apparent progress (complex methods, domain-specific gains, empirical tuning) reflects genuine advances or measurement/confound artifacts. This is a theme that H4 (training recipe problem) started — the wiki is accumulating convergence evidence that the field may be overcomplicating things.
+
+### Research Roadmap Session: TARA-centric FGVR Strategy
+- Baseline confirmed: TARA (Qwen3-VL-2B + BioCLIP2) running on 8×3090
+- Central question: "Data vs. Algorithm" — is TARA's gain from alignment loss or BFM-structured data?
+- Organized 10 hypotheses into 4 phases anchored to TARA:
+  - **Phase 1 (Week 1-2)**: Diagnose TARA — H10 (layer probing), H8-TARA (data vs. algorithm ablation), H4-TARA (baseline tuning)
+  - **Phase 2A (Week 2-4)**: Optimize alignment, if alignment loss proven important — H3 (teacher quality), H7 (teacher at inference), cross-domain TARA
+  - **Phase 2B (Week 2-4)**: Optimize data, if data proven key — H8-FineR1 (CoT data vs. RL), better data construction
+  - **Phase 3 (Week 4-8)**: Method fusion — H2 (GRAB+TARA), H8-comprehensive (2×2 data×algorithm matrix), H6 (DIVA+FGVR, conditional)
+  - **Phase 4 (Week 8+)**: Generalization — H5 (training-free grounding), H9 (latent capabilities), H1 (TARA+Fine-R1, conditional)
+- Key principle: each phase's result determines next phase's direction. Not a fixed plan — a decision tree.
+- Saved roadmap to [[synthesis/discussion-2026-05-29]]
+
+### Ingest: SG-SRL (arxiv 2026)
+- Paper: "Source-Grounded Semantic Reinforcement Learning for Low-Resource Target-Language Generation"
+- Core claim: Source-language monolingual data → cross-lingual semantic supervision via reranker reward + train–reinforce–recover decoupling
+- New domain: NLP / cross-lingual generation. Expands wiki beyond vision.
+- Created paper note: [[papers/SG-SRL-crosslingual-semantic-rl]]
+- Created concept: [[concepts/reward-hacking]]
+- Added 2 open questions to [[gaps/questions]]
+- Cross-cutting insight: SG-SRL's decouple-then-recover pattern (separate semantic learning from form, accept degraded intermediate, recover later) is isomorphic to TARA's design (inject BFM knowledge in training, then RFT to produce deployable format). Two domains, same architectural logic.
+
+### Ingest: AgentDoG 1.5 (arxiv 2026)
+- Paper: "AgentDoG 1.5: A Lightweight and Scalable Alignment Framework for AI Agent Safety and Security"
+- Core claim: Taxonomy-guided data engine with influence-function purification trains effective guard models from ~1k samples
+- New domain: AI agent safety. Expands wiki beyond vision/language to agent systems.
+- Created paper note: [[papers/AgentDoG-1.5-agent-safety]]
+- Created concept: [[concepts/influence-function-purification]]
+- Added 2 open questions to [[gaps/questions]]
+- Cross-cutting insight: The 3D safety taxonomy (risk source × failure mode × real-world harm) is a diagnostic framework that could inspire structured FGVR error analysis
+
+### Ingest: Future-Experience Conditioning (arxiv 2026)
+- Paper: "LLM-Guided Future Hypotheses for Horizon-Aware Exploration in Multi-Step Robot Manipulation"
+- Core claim: Short-horizon generated future videos serve as structured priors for BC and RL fine-tuning in robot manipulation
+- New domain: Robot manipulation / video diffusion. Expands wiki to robotics.
+- Created paper note: [[papers/FEC-future-experience-conditioning]]
+- Added 1 open question to [[gaps/questions]]
+
+### Ingest: AGSM (arxiv 2026)
+- Paper: "Alignment-Guided Score Matching for Text-to-Image Alignment in Diffusion Models"
+- Core claim: Reward-free Plackett-Luce score-level guidance on soft tokens improves T2I alignment while preventing off-manifold divergence
+- New domain: Diffusion model alignment / T2I. Expands wiki to generative models.
+- Created paper note: [[papers/AGSM-alignment-guided-score-matching]]
+- Created concept: [[concepts/score-matching-alignment]]
+- Added 2 open questions to [[gaps/questions]]
+- Significant cross-cutting insight: AGSM is the strongest instance of "don't retrain, redirect" yet — only 8 soft tokens (1.8M params) trained, backbone fully frozen. The dual-token design (ψ+/ψ−, drop ψ− at inference) is a clean separation of alignment and contrastive signals that could directly inspire TARA extensions (e.g., BFM-aligned token + anti-taxonomic token).
+- Connected to existing thread: AGSM + [[concepts/text-to-point-grounding]] = two training-free/minimal-training approaches that repurpose native model outputs for new capabilities
+
+### Ingest: CGPO (arxiv 2026)
+- Paper: "Sample-Efficient Diffusion-based Reinforcement Learning with Critic Guidance"
+- Core claim: Training-free critic guidance + DSG constraint enables diffusion RL that balances exploration-exploitation, achieving first real-world diffusion RL on robot arm
+- New domain: Diffusion-based RL. Expands wiki to RL + real-world robotics.
+- Created paper note: [[papers/CGPO-critic-guided-diffusion-policy]]
+- Created concept: [[concepts/diffusion-policy-rl]]
+- Added 2 open questions to [[gaps/questions]]
+- Cross-cutting insight: CGPO's "guidance at training, unguided at deployment" mirrors TARA's "teacher at training, discard at inference" — this is now a confirmed cross-domain pattern (VL + RL + agents). Worth naming as a general design principle.
+
+### Idea Generation Session — Cross-Domain RL → FGVR
+- Read [[synthesis/shared-assumptions]] (A1–A4), all 10 existing hypotheses, all 5 new RL paper notes
+- RL papers added: SG-SRL (decouple-then-recover), AgentDoG 1.5 (GDPO per-dim reward), AGSM (ψ+/ψ− dual-token), CGPO (Q-signal calibration), FEC (future conditioning)
+- Identified 2 new shared assumptions:
+  - **A5**: New capabilities require new training objectives or architectural modules — challenged by IQA-Spider (training-free grounding) and AGSM (1.8M soft tokens)
+  - **A6**: RL for VL should optimize a single scalar reward — challenged by GDPO (per-dimension advantages) and Plackett-Luce (multi-candidate preference)
+- Generated 3 new hypotheses in [[gaps/hypotheses]]:
+  - **H11**: GDPO-style hierarchical reward decomposition (per-taxonomic-level advantage normalization) → improves HCA ≥2pp over scalar reward TARA. Addresses G3 from new angle: reward structure may matter more than teacher quality. (Feasibility: High, ~1 day)
+  - **H12**: Explicit negative taxonomic guidance (ψ+/ψ− pattern from AGSM) — push LMM reps away from hardest confusable species in BFM space. Should help most on top-20% confusable categories. (Feasibility: High, ~1-2 days)
+  - **H13**: Decouple-then-recover scheduling (from SG-SRL) — all alignment epochs before any RFT, with explicit recovery phase. Tests whether interleaving constrains alignment strength. (Feasibility: High, ~1 day)
+- Theme: All 3 hypotheses are "RL methodology improvements applied to TARA" — modification of reward structure or training schedule, not new models or data. Combined implement+test time: <1 week.
+- Total hypotheses now: 13 (H1–H13)
+- Updated [[synthesis/shared-assumptions]] with A5 and A6
+
+### Research Roadmap Session: TARA-centric FGVR Strategy
+- Baseline confirmed: TARA (Qwen3-VL-2B + BioCLIP2) running on 8×3090
+- Central question: "Data vs. Algorithm" — is TARA's gain from alignment loss or BFM-structured data?
+- Organized 10 hypotheses into 4 phases anchored to TARA:
+  - **Phase 1 (Week 1-2)**: Diagnose TARA — H10 (layer probing), H8-TARA (data vs. algorithm ablation), H4-TARA (baseline tuning)
+  - **Phase 2A (Week 2-4)**: Optimize alignment, if alignment loss proven important — H3 (teacher quality), H7 (teacher at inference), cross-domain TARA
+  - **Phase 2B (Week 2-4)**: Optimize data, if data proven key — H8-FineR1 (CoT data vs. RL), better data construction
+  - **Phase 3 (Week 4-8)**: Method fusion — H2 (GRAB+TARA), H8-comprehensive (2×2 data×algorithm matrix), H6 (DIVA+FGVR, conditional)
+  - **Phase 4 (Week 8+)**: Generalization — H5 (training-free grounding), H9 (latent capabilities), H1 (TARA+Fine-R1, conditional)
+- Key principle: each phase's result determines next phase's direction. Not a fixed plan — a decision tree.
+- Saved roadmap to [[synthesis/discussion-2026-05-29]]
