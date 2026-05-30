@@ -183,3 +183,56 @@ Your testable research ideas. Each hypothesis must be falsifiable: "If X is true
 4. **Generalization test**: If the diagnostic works across all 3 methods, the principle generalizes — for any representation intervention task, run the linear probing diagnostic to predict which layers to target, without method-specific tuning.
 **Risks**: Linear probing accuracy may not capture the representation properties that alignment losses exploit. A layer may have high probing accuracy for the target structure but be suboptimal for alignment because the representations are already "good enough" — alignment may help most at layers where probing accuracy is intermediate (some structure present but not fully formed). This would mean the relationship is not peak-but-shoulder: optimal layer = argmax(probing_gradient) rather than argmax(probing_accuracy). The diagnostic may need to be a first derivative rather than absolute value. Also: some methods intervene on multiple layers (DIVA: range 8-18, not a single layer), so the diagnostic needs to predict a range, not a point.
 **Created**: 2026-05-29
+
+---
+
+## H11: GDPO-style hierarchical reward decomposition — normalizing TARA's RFT reward per taxonomic level independently — improves HCA more than tuning the BFM teacher quality
+
+**Status**: draft
+**Feasibility**: High on 8×3090. Pure reward function modification — no new model components, no extra memory. Replace TARA's scalar GRPO reward normalization with GDPO's per-dimension advantage normalization. Taxonomic levels (order, family, genus, species) serve as the four dimensions. ~1 day to implement and test.
+**Addresses gap**: [[gaps/confirmed-gaps#G3]] (teacher quality dependency) from a novel angle. If the RL reward structure matters more than the BFM teacher quality, you can improve TARA without finding a better BFM.
+**Source papers**: [[AgentDoG-1.5-agent-safety]] (GDPO per-dimension advantage normalization), [[TARA-taxonomy-aware-alignment]] (current scalar accuracy reward)
+**If true, then**: Training TARA with GDPO-style per-taxonomic-level reward decomposition should improve HCA by ≥2pp over standard TARA with the same BFM teacher, because the RL signal now distinguishes "wrong species but correct genus" from "completely wrong at all levels." Specifically: (a) GDPO-TARA's HCA on iNat21-Plant should exceed standard TARA's HCA (12.78), and (b) the improvement should be largest at intermediate taxonomic levels (family, genus) where the binary reward previously provided zero signal.
+**How to test**:
+1. Take TARA's Qwen3-VL-2B + BioCLIP2 setup on iNat21-Plant
+2. Modify the RFT reward: instead of `r = accuracy(species)`, compute `r = (acc_order, acc_family, acc_genus, acc_species)` as a 4-dim binary vector
+3. Replace GRPO's scalar group-relative normalization with GDPO's per-dimension normalization (normalize advantage per dimension, combine with batch-level norm)
+4. Keep all other TARA components unchanged (L_V, L_C, BioCLIP2 teacher)
+5. Compare HCA at each level against standard TARA and No-Thinking RFT baseline
+**Risks**: GDPO was designed for qualitatively different dimensions (failure mode, harm, risk source). Taxonomic levels are nested/correlated (species ⊂ genus ⊂ family ⊂ order) — per-dimension normalization may overcorrect for this correlation. Mitigation: measure correlation between taxonomic-level accuracies first. If species and genus accuracy are nearly perfectly correlated (r > 0.95), skip.
+**Created**: 2026-05-30
+
+---
+
+## H12: Adding explicit negative taxonomic guidance — pushing LMM representations away from the hardest confusable species in BFM space — improves TARA on the most fine-grained, confusable categories
+
+**Status**: draft
+**Feasibility**: High on 8×3090. Pure loss function modification — add a negative cosine similarity term to L_V and L_C. The hardest negative identified from BFM text embeddings in each batch. No extra model components. ~1-2 days.
+**Addresses gap**: [[gaps/confirmed-gaps#G3]] from the opposite direction of H11 — rather than ignoring teacher quality, use the BFM teacher *more* by extracting negative signal. Connects to the cross-domain "ψ+/ψ− dual-token" pattern from [[AGSM-alignment-guided-score-matching]].
+**Source papers**: [[AGSM-alignment-guided-score-matching]] (ψ+/ψ− dual-token design, bounded negative guidance), [[TARA-taxonomy-aware-alignment]] (current positive-only alignment)
+**If true, then**: TARA with negative taxonomic guidance (TARA-neg) should achieve higher leaf accuracy on the hardest 20% of categories (those with nearest BFM neighbor within Δcos < 0.05), with minimal effect on easy categories. Specifically: within-genus species pairs where BFM cosine similarity > 0.9 should show the largest improvement.
+**How to test**:
+1. For each training sample, identify the hardest negative: `argmax_{k≠gt} cos_sim(BFM_text(gt), BFM_text(k))` within the batch
+2. Add negative term to L_V: `L_V' = L_V - λ × cos_sim(LMM_feat, BFM_feat_hardest_negative)` with λ=0.1
+3. Add corresponding negative term to L_C
+4. Stratify evaluation by confusability bin (nearest BFM neighbor distance)
+5. Compare TARA-neg vs. TARA per bin
+**Risks**: (a) Batch-level hardest negative ≠ global hardest negative. Mitigation: pre-compute top-5 nearest neighbors per species, always include one in each batch. (b) Negative weight λ too large → off-manifold representations (SoftREPA failure mode). Mitigation: follow AGSM's bounded negative guidance — use Plackett-Luce normalization rather than unbounded contrastive pushing.
+**Created**: 2026-05-30
+
+---
+
+## H13: Explicit "decouple-then-recover" scheduling — running all BFM alignment epochs before any RFT — produces better TARA performance than interleaved alignment+RFT
+
+**Status**: draft
+**Feasibility**: High on 8×3090. Same model, same data, same losses — only the training schedule changes. Three variants with identical total compute. ~1 day for all.
+**Addresses gap**: Cross-cutting methodology question — is TARA's alternating schedule optimal, or a historical artifact? Tests whether the "decouple-then-recover" pattern from [[SG-SRL-crosslingual-semantic-rl]] generalizes from NLP to visual recognition.
+**Source papers**: [[SG-SRL-crosslingual-semantic-rl]] (explicit decouple-then-recover), [[TARA-taxonomy-aware-alignment]] (current alternating schedule)
+**If true, then**: (a) All-alignment-first scheduling should achieve higher HCA than interleaved, because the BFM alignment phase can use larger loss weights without being constrained by RFT format compatibility; (b) All-alignment-first + explicit recovery should be best overall; (c) optimal alignment loss weight should be 2-3× higher under decoupled scheduling.
+**How to test**:
+1. Fix total training budget equal to standard TARA
+2. Train three variants: (A) Standard alternating, (B) All-alignment-first (k epochs alignment → k epochs RFT), (C) All-alignment-first + recovery (k alignment → k-1 RFT → 1 epoch high-KL RFT, β=0.1)
+3. Sweep alignment loss weight (1×, 2×, 3×, 5×) to test maximum usable strength
+4. Measure HCA, leaf accuracy, and output format stability
+**Risks**: (a) All-alignment-first may cause catastrophic forgetting of task format. Mitigation: Variant C's recovery stage is designed for this. (b) TARA's alternating schedule may be optimal — interleaving provides implicit regularization. This is still a valid finding ("interleaving > decoupling" informs mechanism understanding). (c) Optimal schedule may depend on teacher quality — test with both full and degraded BFM.
+**Created**: 2026-05-30

@@ -35,3 +35,21 @@ What the field takes for granted — often implicitly. These are the most fertil
 - [[papers/Fine-R1-fine-grained-recognition]]: Frames the problem as "LMMs have knowledge but can't deploy it" → teach CoT reasoning
 - Same lab, same base models, different framing — but never tested together
 **What if it's wrong?**: If knowledge injection AND knowledge deployment are both needed for best performance, combining TARA + Fine-R1 should yield super-additive gains. Conversely, if one subsumes the other, combining them should yield no improvement over the better single approach.
+
+## A5: New capabilities require new training objectives or architectural modules
+**The assumption**: To add a new capability to a pretrained model (spatial grounding, cross-task transfer, better alignment), you need a new training objective, specialized loss, or architectural component.
+**Evidence it's unexamined**:
+- [[papers/IQA-Spider-multi-granularity-quality]]: Unlocks pixel-level grounding training-free — reinterprets existing LMM logits as spatial coordinates
+- [[papers/AGSM-alignment-guided-score-matching]]: Improves T2I alignment with only 1.8M trainable soft tokens, frozen backbone — no new objective, just a score-matching reinterpretation
+- [[papers/DIVA-representation-divergence-mutual-reinforcement]]: Lightweight middle-layer post-training rather than new architectural branches
+**What if it's wrong?**: If the capability is already latent in the pretrained model, all we need is a better access mechanism (logit reinterpretation, soft tokens, representation surgery) — not a new training paradigm. This would mean the field is over-engineering solutions to problems that pretraining already solved.
+
+## A6: RL training for VL tasks should optimize a single scalar reward (accuracy, similarity)
+**The assumption**: When applying RL to visual recognition, the natural reward is a single scalar — binary accuracy (correct/incorrect species), or a scalar similarity score. Group-relative normalization (GRPO) operates on this scalar.
+**Evidence it's unexamined**:
+- [[papers/TARA-taxonomy-aware-alignment]]: No-Thinking RFT with scalar accuracy reward — correct species = 1, wrong = 0
+- [[papers/Fine-R1-fine-grained-recognition]]: TAPO optimizes a scalar reward (correctness + format)
+- [[papers/SG-SRL-crosslingual-semantic-rl]]: Scalar reranker relevance score (yes/no probability)
+- [[papers/AgentDoG-1.5-agent-safety]]: **Counterexample** — GDPO normalizes advantages per dimension (failure mode, harm, risk source) and combines, showing that scalar summation discards partial-satisfaction signal
+- [[papers/AGSM-alignment-guided-score-matching]]: **Counterexample** — Plackett-Luce models multi-candidate preference rather than pairwise comparison
+**What if it's wrong?**: If scalar rewards are suboptimal, decomposing the reward along natural task dimensions (taxonomic levels for HVR, multi-granularity for IQA, attribute dimensions for FGVR) should improve RL efficiency and final performance. The key question: does per-dimension signal preservation outweigh the simplicity and stability of scalar rewards?
